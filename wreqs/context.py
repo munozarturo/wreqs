@@ -1,6 +1,9 @@
 from requests import Request, Response, Session
-from typing import Optional
+from typing import Callable, Optional
 import logging
+
+from wreqs.error import RetryRequestError
+from wreqs.fmt import prettify_request_str
 
 
 # Default logger
@@ -16,14 +19,29 @@ class RequestContext:
         self.session = Session()
 
     # todo: add access to send for configuring stuff like proxies
-    # todo: add configuration for refetching
-    def __enter__(self) -> Response:
+    # todo: configure checks for rate limiting bypass (do this on wrapped_session)
+    def __enter__(
+        self, check_retry: Optional[Callable[[Response], bool]], max_retries: int = 3
+    ) -> Response:
         prepared_request = self.session.prepare_request(self.request)
 
         def fetch() -> Response:
             response = self.session.send(prepared_request)
+            return response
 
         self.response = fetch()
+
+        if check_retry:
+            retries: int = 0
+            if check_retry(self.response):
+                if retries <= max_retries:
+                    self.response = fetch()
+                    retries += 1
+                else:
+                    raise RetryRequestError(
+                        f"Failed {retries}/{max_retries} for request {prettify_request_str(self.request)}."
+                    )
+
         return self.response
 
     # todo: add configuration for error handling
