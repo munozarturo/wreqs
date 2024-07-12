@@ -1,16 +1,18 @@
-import json
 from requests import Request, Response, Session
-from typing import Any, Callable, Dict, Optional
+from typing import Optional
 import logging
+
+# Default logger
+logger = logging.getLogger(__name__)
 
 
 class RequestContext:
-    def __init__(self, request: Request) -> None:
+    def __init__(
+        self, request: Request, custom_logger: Optional[logging.Logger] = None
+    ) -> None:
         self.request = request
         self.response: Optional[Response] = None
-
-        self.logger: logging.Logger = logging.getLogger(__name__)
-
+        self.logger = custom_logger or logger
         self.session = Session()
 
     def __enter__(self) -> Response:
@@ -24,5 +26,34 @@ class RequestContext:
         self.session.close()
 
 
-def wrapped_request(req: Request) -> RequestContext:
-    return RequestContext(req)
+def wrapped_request(
+    req: Request, custom_logger: Optional[logging.Logger] = None
+) -> RequestContext:
+    return RequestContext(req, custom_logger)
+
+
+def configure_logger(
+    level: int = logging.INFO,
+    format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filename: Optional[str] = None,
+) -> None:
+    """
+    Configure the default logger for the module.
+
+    Args:
+        level (int): The logging level (e.g., logging.INFO, logging.DEBUG)
+        format (str): The log message format
+        filename (Optional[str]): If provided, logs will be written to this file
+    """
+    global logger
+    logger.setLevel(level)
+
+    if filename:
+        handler = logging.FileHandler(filename)
+    else:
+        handler = logging.StreamHandler()
+
+    formatter = logging.Formatter(format)
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
