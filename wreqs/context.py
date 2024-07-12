@@ -1,3 +1,4 @@
+import time
 from requests import Request, Response, Session
 from typing import Callable, Generator, Optional, Union
 import logging
@@ -8,12 +9,17 @@ from wreqs.fmt import prettify_request_str
 logger = logging.getLogger(__name__)
 
 
+# todo: configure checks for rate limiting bypass
+# todo: add access to send for configuring stuff like proxies
+
+
 class RequestContext:
     def __init__(
         self,
         request: Request,
         max_retries: int = 3,
         check_retry: Optional[Callable[[Response], bool]] = None,
+        sleep_before_retry: Optional[int] = None,
         session: Optional[Session] = None,
     ) -> None:
         self.logger = logger
@@ -22,6 +28,13 @@ class RequestContext:
         self.session = session or Session()
         self.max_retries = max_retries
         self.check_retry = check_retry
+        self.sleep_before_retry = sleep_before_retry
+        self.logger.info(
+            f"RequestContext initialized for {request.method} {request.url}"
+        )
+        self.logger.debug(
+            f"Max retries: {max_retries}, Sleep before retry: {sleep_before_retry}s"
+        )
 
     def _fetch(self) -> Response:
         """
@@ -32,8 +45,14 @@ class RequestContext:
         Returns:
             Response: The response received from the server.
         """
+        self.logger.info(f"Preparing request: {self.request.method} {self.request.url}")
         prepared_request = self.session.prepare_request(self.request)
-        return self.session.send(prepared_request)
+        self.logger.debug(f"Request headers: {prepared_request.headers}")
+        self.logger.info(f"Sending request to {prepared_request.url}")
+        response = self.session.send(prepared_request)
+        self.logger.info(f"Received response: Status {response.status_code}")
+        self.logger.debug(f"Response headers: {response.headers}")
+        return response
 
     def _handle_retry(self) -> Response:
         """
@@ -51,32 +70,52 @@ class RequestContext:
         """
         retries = 0
         while retries < self.max_retries:
+            self.logger.info(f"Attempt {retries + 1}/{self.max_retries}")
             self.response = self._fetch()
             if not self.check_retry or not self.check_retry(self.response):
+                self.logger.info("Request successful, no retry needed")
                 return self.response
             retries += 1
-            self.logger.warning(f"Retrying request ({retries}/{self.max_retries})")
+
+            self.logger.warning(
+                f"Retry criteria met. Retrying request ({retries}/{self.max_retries})"
+            )
+
+            if self.sleep_before_retry:
+                self.logger.info(f"Sleeping {self.sleep_before_retry}s before retry.")
+                time.sleep(self.sleep_before_retry)
+
+        self.logger.error(f"Max retries ({self.max_retries}) reached without success")
         raise RetryRequestError(
             f"Failed after {self.max_retries} retries for request {prettify_request_str(self.request)}."
         )
 
-    # todo: add access to send for configuring stuff like proxies
-    # todo: configure checks for rate limiting bypass (do this on wrapped_session)
     def __enter__(self) -> Response:
+        self.logger.info("Entering RequestContext")
         try:
             if self.check_retry:
+                self.logger.info(
+                    "Retry check function provided, handling potential retries"
+                )
                 return self._handle_retry()
             else:
+                self.logger.info("No retry check function, performing single fetch")
                 return self._fetch()
         except Exception as e:
             self.logger.error(f"Error during request: {str(e)}")
             raise
 
-    # todo: add configuration for error handling
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.logger.info("Exiting RequestContext")
         if self.response:
+            self.logger.debug("Closing response")
             self.response.close()
+        self.logger.debug("Closing session")
         self.session.close()
+        if exc_type:
+            self.logger.error(
+                f"Exception occurred: {exc_type.__name__}: {str(exc_val)}"
+            )
 
 
 @contextmanager
