@@ -31,7 +31,7 @@ def _format_content(content: Any) -> Any:
         return str(content)
 
 
-def _prettify_request_str(
+def prettify_request_str(
     request: Request, verbose: bool | Dict[str, bool] = False
 ) -> str:
     """
@@ -132,7 +132,7 @@ def _prettify_request_str(
         return f"{basic_info} {json_str}"
 
 
-def _prettify_response_str(
+def prettify_response_str(
     response: Response, verbose: bool | Dict[str, bool] = False
 ) -> str:
     """

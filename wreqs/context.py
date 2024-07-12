@@ -2,6 +2,7 @@ from requests import Request, Response, Session
 from typing import Optional
 import logging
 
+
 # Default logger
 logger = logging.getLogger(__name__)
 
@@ -14,11 +15,18 @@ class RequestContext:
         self.response: Optional[Response] = None
         self.session = Session()
 
+    # todo: add access to send for configuring stuff like proxies
+    # todo: add configuration for refetching
     def __enter__(self) -> Response:
         prepared_request = self.session.prepare_request(self.request)
-        self.response = self.session.send(prepared_request)
+
+        def fetch() -> Response:
+            response = self.session.send(prepared_request)
+
+        self.response = fetch()
         return self.response
 
+    # todo: add configuration for error handling
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         if self.response:
             self.response.close()
