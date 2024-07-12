@@ -77,7 +77,7 @@ class RequestContext:
             retries += 1
 
             self.logger.warning(
-                f"Retry attempt {retries + 1}/{self.max_retries}: {prettify_request_str(self.request)}"
+                f"Retry attempt {retries}/{self.max_retries}: {prettify_request_str(self.request)}"
             )
 
             if self.sleep_before_retry:
