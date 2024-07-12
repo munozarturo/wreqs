@@ -4,7 +4,7 @@ from typing import Callable, Generator, Optional, Union
 import logging
 from contextlib import contextmanager
 from wreqs.error import RetryRequestError
-from wreqs.fmt import prettify_request_str
+from wreqs.fmt import prettify_request_str, prettify_response_str
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +29,8 @@ class RequestContext:
         self.max_retries = max_retries
         self.check_retry = check_retry
         self.sleep_before_retry = sleep_before_retry
-        self.logger.info(
-            f"RequestContext initialized for {request.method} {request.url}"
-        )
+
+        self.logger.info(f"RequestContext initialized: {prettify_request_str(request)}")
         self.logger.debug(
             f"Max retries: {max_retries}, Sleep before retry: {sleep_before_retry}s"
         )
@@ -45,13 +44,13 @@ class RequestContext:
         Returns:
             Response: The response received from the server.
         """
-        self.logger.info(f"Preparing request: {self.request.method} {self.request.url}")
+        self.logger.info(f"Preparing request")
         prepared_request = self.session.prepare_request(self.request)
-        self.logger.debug(f"Request headers: {prepared_request.headers}")
-        self.logger.info(f"Sending request to {prepared_request.url}")
+
+        self.logger.info(f"Sending request: {prettify_request_str(self.request)}")
         response = self.session.send(prepared_request)
-        self.logger.info(f"Received response: Status {response.status_code}")
-        self.logger.debug(f"Response headers: {response.headers}")
+        self.logger.info(f"Received response: {prettify_response_str(response)}")
+
         return response
 
     def _handle_retry(self) -> Response:
@@ -78,7 +77,7 @@ class RequestContext:
             retries += 1
 
             self.logger.warning(
-                f"Retry criteria met. Retrying request ({retries}/{self.max_retries})"
+                f"Retry attempt {retries + 1}/{self.max_retries}: {prettify_request_str(self.request)}"
             )
 
             if self.sleep_before_retry:
@@ -91,7 +90,9 @@ class RequestContext:
         )
 
     def __enter__(self) -> Response:
-        self.logger.info("Entering RequestContext")
+        self.logger.info(
+            f"Entering RequestContext: {prettify_request_str(self.request)}"
+        )
         try:
             if self.check_retry:
                 self.logger.info(
@@ -107,11 +108,15 @@ class RequestContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.logger.info("Exiting RequestContext")
+
         if self.response:
-            self.logger.debug("Closing response")
-            self.response.close()
+            self.logger.info(
+                f"Exiting RequestContext: {prettify_response_str(self.response)}"
+            )
+
         self.logger.debug("Closing session")
         self.session.close()
+
         if exc_type:
             self.logger.error(
                 f"Exception occurred: {exc_type.__name__}: {str(exc_val)}"
