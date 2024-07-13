@@ -1,4 +1,3 @@
-import time
 import logging
 
 from requests import Request, Response, Session, Timeout
@@ -19,7 +18,7 @@ class RequestContext:
         request: Request,
         max_retries: int = 3,
         check_retry: Optional[Callable[[Response], bool]] = None,
-        before_retry: Optional[Callable[[Response], None]] = None,
+        retry_callback: Optional[Callable[[Response], None]] = None,
         session: Optional[Session] = None,
         timeout: Optional[float] = None,
         **send_config: dict[str, Any],
@@ -30,7 +29,7 @@ class RequestContext:
         self.session = session or Session()
         self.max_retries = max_retries
         self.check_retry = check_retry
-        self.before_retry = before_retry
+        self.retry_callback = retry_callback
         self.timeout = timeout
         self.send_config = send_config
 
@@ -87,9 +86,9 @@ class RequestContext:
                 f"Retry attempt {retries}/{self.max_retries}: {prettify_request_str(self.request)}"
             )
 
-            if self.before_retry:
-                self.logger.info(f"Calling `before_retry` before retry.")
-                self.before_retry(self.response)
+            if self.retry_callback:
+                self.logger.info(f"Calling `retry_callback` before retry.")
+                self.retry_callback(self.response)
 
         self.logger.error(f"Max retries ({self.max_retries}) reached without success")
         raise RetryRequestError(
@@ -135,7 +134,7 @@ def wrapped_request(
     req: Request,
     max_retries: int = 3,
     check_retry: Optional[Callable[[Response], bool]] = None,
-    before_retry: Optional[Callable[[Response], None]] = None,
+    retry_callback: Optional[Callable[[Response], None]] = None,
     session: Optional[Session] = None,
     timeout: Optional[float] = None,
 ) -> Generator[Response, None, None]:
@@ -143,7 +142,7 @@ def wrapped_request(
         req,
         max_retries,
         check_retry,
-        before_retry=before_retry,
+        retry_callback=retry_callback,
         session=session,
         timeout=timeout,
     )

@@ -129,12 +129,12 @@ def test_with_retry_and_retry_callback_pre_reqs():
     def retry_if_not_success(res: requests.Response) -> bool:
         return res.status_code != 200
 
-    def before_retry(res: requests.Response) -> None:
+    def retry_callback(res: requests.Response) -> None:
         time.sleep(1)
 
     with pytest.raises(RetryRequestError):
         with wrapped_request(
-            req, check_retry=retry_if_not_success, before_retry=before_retry
+            req, check_retry=retry_if_not_success, retry_callback=retry_callback
         ) as _:
             pytest.fail()
 
@@ -150,10 +150,10 @@ def test_with_retry_and_retry_callback():
     def retry_if_not_success(res: requests.Response) -> bool:
         return res.status_code != 200
 
-    def before_retry(res: requests.Response) -> None:
+    def retry_callback(res: requests.Response) -> None:
         time.sleep(1)
 
     with wrapped_request(
-        req, check_retry=retry_if_not_success, before_retry=before_retry
+        req, check_retry=retry_if_not_success, retry_callback=retry_callback
     ) as response:
         assert response.status_code == 200
