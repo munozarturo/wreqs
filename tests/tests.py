@@ -1,3 +1,8 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import pytest
 from requests import Request, Timeout
 from wreqs import wrapped_request
@@ -9,7 +14,7 @@ def start_server():
     import subprocess
     import time
 
-    server = subprocess.Popen(["python", "tests/msrv.py"])
+    server = subprocess.Popen(["python", "tests/app.py"])
     time.sleep(1)
     yield
     server.terminate()
