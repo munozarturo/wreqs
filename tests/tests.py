@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+
 # alternatively package and install `wreqs` module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -53,3 +54,15 @@ def test_with_session():
 
         with wrapped_request(protected_req, session=session) as response:
             assert response.status_code == 200
+
+
+def test_timeout():
+    timeout: float = 4
+    req = requests.Request("POST", prepare_url("/timeout"), json={"timeout": timeout})
+
+    with wrapped_request(req, timeout=timeout + 1) as response:
+        assert response.status_code == 200
+
+    with pytest.raises(requests.Timeout):
+        with wrapped_request(req, timeout=timeout - 0.5) as response:
+            pytest.fail()

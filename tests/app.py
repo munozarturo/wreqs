@@ -1,3 +1,4 @@
+import time
 from typing import Any
 from flask import Flask, Response, json, request
 
@@ -34,6 +35,20 @@ def authenticated_only_ping():
     else:
         resp.status = 401
         resp.data = json.dumps({"message": "unauthorized"})
+    return resp
+
+
+@app.post("/timeout")
+def timeout():
+    data: dict[str, Any] = request.json
+    timeout: float = data["timeout"]
+
+    time.sleep(timeout)
+
+    data: dict[str, Any] = {"message": "success"}
+    resp: Response = app.response_class(
+        response=json.dumps(data), status=200, mimetype="application/json"
+    )
     return resp
 
 
