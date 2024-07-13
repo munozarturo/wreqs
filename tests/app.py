@@ -1,3 +1,4 @@
+from collections import defaultdict
 import time
 from typing import Any
 from flask import Flask, Response, json, request
@@ -40,14 +41,40 @@ def authenticated_only_ping():
 
 @app.post("/timeout")
 def timeout():
-    data: dict[str, Any] = request.json
-    timeout: float = data["timeout"]
+    req_data: dict[str, Any] = request.json
+    timeout: float = req_data["timeout"]
 
     time.sleep(timeout)
 
     data: dict[str, Any] = {"message": "success"}
     resp: Response = app.response_class(
         response=json.dumps(data), status=200, mimetype="application/json"
+    )
+    return resp
+
+
+num_reqs_by_signature: defaultdict[str, int] = defaultdict(lambda: 0)
+
+
+@app.post("/retry")
+def retry():
+    req_data: dict[str, Any] = request.json
+    signature: str = req_data["signature"]
+    succeed_after: int = int(req_data["succeed_after"])
+    num_reqs_by_signature[signature] += 1
+
+    resp: Response = app.response_class(
+        response=json.dumps(
+            {
+                "message": (
+                    "success"
+                    if num_reqs_by_signature[signature] > succeed_after
+                    else "error"
+                )
+            }
+        ),
+        status=200 if num_reqs_by_signature[signature] > succeed_after else 500,
+        mimetype="application/json",
     )
     return resp
 

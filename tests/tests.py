@@ -1,3 +1,4 @@
+import random
 import sys
 from pathlib import Path
 
@@ -64,5 +65,47 @@ def test_timeout():
         assert response.status_code == 200
 
     with pytest.raises(requests.Timeout):
-        with wrapped_request(req, timeout=timeout - 0.5) as response:
+        with wrapped_request(req, timeout=timeout - 0.5) as _:
             pytest.fail()
+
+
+def test_with_retry_pre_reqs():
+    signature: str = random.randbytes(4).hex()
+    req = requests.Request(
+        "POST", prepare_url("/retry"), json={"signature": signature, "succeed_after": 3}
+    )
+
+    def retry_if_not_success(res: requests.Response) -> bool:
+        return res.status_code != 200
+
+    with pytest.raises(RetryRequestError):
+        with wrapped_request(req, check_retry=retry_if_not_success) as _:
+            pytest.fail()
+
+
+def test_with_retry():
+    signature: str = random.randbytes(4).hex()
+    req = requests.Request(
+        "POST", prepare_url("/retry"), json={"signature": signature, "succeed_after": 2}
+    )
+
+    def retry_if_not_success(res: requests.Response) -> bool:
+        return res.status_code != 200
+
+    with wrapped_request(req, check_retry=retry_if_not_success) as response:
+        assert response.status_code == 200
+
+
+def test_with_retry_modified_max():
+    signature: str = random.randbytes(4).hex()
+    req = requests.Request(
+        "POST", prepare_url("/retry"), json={"signature": signature, "succeed_after": 3}
+    )
+
+    def retry_if_not_success(res: requests.Response) -> bool:
+        return res.status_code != 200
+
+    with wrapped_request(
+        req, check_retry=retry_if_not_success, max_retries=4
+    ) as response:
+        assert response.status_code == 200
