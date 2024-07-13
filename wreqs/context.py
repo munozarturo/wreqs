@@ -1,6 +1,6 @@
 import time
-from requests import Request, Response, Session
-from typing import Callable, Generator, Optional, Union
+from requests import Request, Response, Session, Timeout
+from typing import Callable, Generator, Optional
 import logging
 from contextlib import contextmanager
 from wreqs.error import RetryRequestError
@@ -19,8 +19,9 @@ class RequestContext:
         request: Request,
         max_retries: int = 3,
         check_retry: Optional[Callable[[Response], bool]] = None,
-        sleep_before_retry: Optional[int] = None,
+        sleep_before_retry: Optional[float] = None,
         session: Optional[Session] = None,
+        timeout: Optional[float] = None,
     ) -> None:
         self.logger = logger
         self.request = request
@@ -29,6 +30,7 @@ class RequestContext:
         self.max_retries = max_retries
         self.check_retry = check_retry
         self.sleep_before_retry = sleep_before_retry
+        self.timeout = timeout
 
         self.logger.info(f"RequestContext initialized: {prettify_request_str(request)}")
         self.logger.debug(
@@ -47,9 +49,12 @@ class RequestContext:
         self.logger.info(f"Preparing request")
         prepared_request = self.session.prepare_request(self.request)
 
-        self.logger.info(f"Sending request: {prettify_request_str(self.request)}")
-        response = self.session.send(prepared_request)
-        self.logger.info(f"Received response: {prettify_response_str(response)}")
+        try:
+            response = self.session.send(prepared_request, timeout=self.timeout)
+            self.logger.info(f"Received response: {prettify_response_str(response)}")
+        except Timeout:
+            self.logger.error(f"Request timed out after {self.timeout}s")
+            raise
 
         return response
 
@@ -128,9 +133,18 @@ def wrapped_request(
     req: Request,
     max_retries: int = 3,
     check_retry: Optional[Callable[[Response], bool]] = None,
+    sleep_before_retry: Optional[float] = None,
     session: Optional[Session] = None,
+    timeout: Optional[float] = None,
 ) -> Generator[Response, None, None]:
-    context = RequestContext(req, max_retries, check_retry, session)
+    context = RequestContext(
+        req,
+        max_retries,
+        check_retry,
+        sleep_before_retry=sleep_before_retry,
+        session=session,
+        timeout=timeout,
+    )
     try:
         yield context.__enter__()
     finally:
