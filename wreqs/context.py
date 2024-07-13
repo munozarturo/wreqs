@@ -19,7 +19,7 @@ class RequestContext:
         request: Request,
         max_retries: int = 3,
         check_retry: Optional[Callable[[Response], bool]] = None,
-        sleep_before_retry: Optional[float] = None,
+        before_retry: Optional[Callable[[Response], None]] = None,
         session: Optional[Session] = None,
         timeout: Optional[float] = None,
         **send_config: dict[str, Any],
@@ -30,14 +30,12 @@ class RequestContext:
         self.session = session or Session()
         self.max_retries = max_retries
         self.check_retry = check_retry
-        self.sleep_before_retry = sleep_before_retry
+        self.before_retry = before_retry
         self.timeout = timeout
         self.send_config = send_config
 
         self.logger.info(f"RequestContext initialized: {prettify_request_str(request)}")
-        self.logger.debug(
-            f"Max retries: {max_retries}, Sleep before retry: {sleep_before_retry}s"
-        )
+        self.logger.debug(f"Max retries: {max_retries}")
 
     def _fetch(self) -> Response:
         """
@@ -89,9 +87,9 @@ class RequestContext:
                 f"Retry attempt {retries}/{self.max_retries}: {prettify_request_str(self.request)}"
             )
 
-            if self.sleep_before_retry:
-                self.logger.info(f"Sleeping {self.sleep_before_retry}s before retry.")
-                time.sleep(self.sleep_before_retry)
+            if self.before_retry:
+                self.logger.info(f"Calling `before_retry` before retry.")
+                self.before_retry(self.response)
 
         self.logger.error(f"Max retries ({self.max_retries}) reached without success")
         raise RetryRequestError(
@@ -137,7 +135,7 @@ def wrapped_request(
     req: Request,
     max_retries: int = 3,
     check_retry: Optional[Callable[[Response], bool]] = None,
-    sleep_before_retry: Optional[float] = None,
+    before_retry: Optional[Callable[[Response], None]] = None,
     session: Optional[Session] = None,
     timeout: Optional[float] = None,
 ) -> Generator[Response, None, None]:
@@ -145,7 +143,7 @@ def wrapped_request(
         req,
         max_retries,
         check_retry,
-        sleep_before_retry=sleep_before_retry,
+        before_retry=before_retry,
         session=session,
         timeout=timeout,
     )
