@@ -72,7 +72,9 @@ def test_timeout():
 def test_with_retry_pre_reqs():
     signature: str = random.randbytes(4).hex()
     req = requests.Request(
-        "POST", prepare_url("/retry"), json={"signature": signature, "succeed_after": 3}
+        "POST",
+        prepare_url("/retry/number"),
+        json={"signature": signature, "succeed_after_attempt": 3},
     )
 
     def retry_if_not_success(res: requests.Response) -> bool:
@@ -86,7 +88,9 @@ def test_with_retry_pre_reqs():
 def test_with_retry():
     signature: str = random.randbytes(4).hex()
     req = requests.Request(
-        "POST", prepare_url("/retry"), json={"signature": signature, "succeed_after": 2}
+        "POST",
+        prepare_url("/retry/number"),
+        json={"signature": signature, "succeed_after_attempt": 2},
     )
 
     def retry_if_not_success(res: requests.Response) -> bool:
@@ -99,7 +103,9 @@ def test_with_retry():
 def test_with_retry_modified_max():
     signature: str = random.randbytes(4).hex()
     req = requests.Request(
-        "POST", prepare_url("/retry"), json={"signature": signature, "succeed_after": 3}
+        "POST",
+        prepare_url("/retry/number"),
+        json={"signature": signature, "succeed_after_attempt": 3},
     )
 
     def retry_if_not_success(res: requests.Response) -> bool:

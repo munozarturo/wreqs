@@ -56,11 +56,11 @@ def timeout():
 num_reqs_by_signature: defaultdict[str, int] = defaultdict(lambda: 0)
 
 
-@app.post("/retry")
+@app.post("/retry/number")
 def retry():
     req_data: dict[str, Any] = request.json
     signature: str = req_data["signature"]
-    succeed_after: int = int(req_data["succeed_after"])
+    succeed_after_attempt: int = int(req_data["succeed_after_attempt"])
     num_reqs_by_signature[signature] += 1
 
     resp: Response = app.response_class(
@@ -68,12 +68,12 @@ def retry():
             {
                 "message": (
                     "success"
-                    if num_reqs_by_signature[signature] > succeed_after
+                    if num_reqs_by_signature[signature] > succeed_after_attempt
                     else "error"
                 )
             }
         ),
-        status=200 if num_reqs_by_signature[signature] > succeed_after else 500,
+        status=200 if num_reqs_by_signature[signature] > succeed_after_attempt else 500,
         mimetype="application/json",
     )
     return resp
