@@ -1,6 +1,7 @@
 import random
 import sys
 from pathlib import Path
+import time
 
 
 # alternatively package and install `wreqs` module
@@ -113,5 +114,46 @@ def test_with_retry_modified_max():
 
     with wrapped_request(
         req, check_retry=retry_if_not_success, max_retries=4
+    ) as response:
+        assert response.status_code == 200
+
+
+def test_with_retry_and_retry_callback_pre_reqs():
+    signature: str = random.randbytes(4).hex()
+    req = requests.Request(
+        "POST",
+        prepare_url("/retry/time"),
+        json={"signature": signature, "succeed_after_s": 5},
+    )
+
+    def retry_if_not_success(res: requests.Response) -> bool:
+        return res.status_code != 200
+
+    def before_retry(res: requests.Response) -> None:
+        time.sleep(1)
+
+    with pytest.raises(RetryRequestError):
+        with wrapped_request(
+            req, check_retry=retry_if_not_success, before_retry=before_retry
+        ) as _:
+            pytest.fail()
+
+
+def test_with_retry_and_retry_callback():
+    signature: str = random.randbytes(4).hex()
+    req = requests.Request(
+        "POST",
+        prepare_url("/retry/time"),
+        json={"signature": signature, "succeed_after_s": 2},
+    )
+
+    def retry_if_not_success(res: requests.Response) -> bool:
+        return res.status_code != 200
+
+    def before_retry(res: requests.Response) -> None:
+        time.sleep(1)
+
+    with wrapped_request(
+        req, check_retry=retry_if_not_success, before_retry=before_retry
     ) as response:
         assert response.status_code == 200

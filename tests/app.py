@@ -57,7 +57,7 @@ num_reqs_by_signature: defaultdict[str, int] = defaultdict(lambda: 0)
 
 
 @app.post("/retry/number")
-def retry():
+def retry_number():
     req_data: dict[str, Any] = request.json
     signature: str = req_data["signature"]
     succeed_after_attempt: int = int(req_data["succeed_after_attempt"])
@@ -76,6 +76,35 @@ def retry():
         status=200 if num_reqs_by_signature[signature] > succeed_after_attempt else 500,
         mimetype="application/json",
     )
+    return resp
+
+
+signature_first_seen: defaultdict[str, float] = defaultdict(time.time)
+
+
+@app.post("/retry/time")
+def retry_time():
+    req_data: dict[str, Any] = request.json
+    signature: str = req_data["signature"]
+    succeed_after_s: float = float(req_data["succeed_after_s"])
+
+    succeed_time: float = signature_first_seen[signature] + succeed_after_s
+    resp: Response = app.response_class(
+        response=json.dumps(
+            {"message": ("success" if time.time() > succeed_time else "error")}
+        ),
+        status=200 if time.time() > succeed_time else 500,
+        mimetype="application/json",
+    )
+
+    print(
+        signature,
+        signature_first_seen[signature],
+        succeed_after_s,
+        succeed_time,
+        time.time(),
+    )
+
     return resp
 
 
