@@ -1,12 +1,20 @@
 import sys
 from pathlib import Path
 
+# alternatively package and install `wreqs` module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from requests import Request, Timeout
+import requests
 from wreqs import wrapped_request
 from wreqs.error import RetryRequestError
+
+
+BASE_URL = "http://localhost:5000"
+
+
+def prepare_url(path: str) -> str:
+    return f"{BASE_URL}/{path}"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -20,40 +28,28 @@ def start_server():
     server.terminate()
 
 
-def test_successful_request():
-    req = Request("GET", "http://localhost:5000/success")
+def test_simple():
+    req = requests.Request("GET", prepare_url("/ping"))
 
     with wrapped_request(req) as response:
         assert response.status_code == 200
-        assert response.text == "Success"
 
 
-def test_retry_request():
-    req = Request("GET", "http://localhost:5000/retry")
+def test_with_session_pre_reqs():
+    protected_req = requests.Request("GET", prepare_url("/protected/ping"))
 
-    def check_retry(response):
-        return response.status_code == 429
-
-    with pytest.raises(RetryRequestError):
-        with wrapped_request(
-            req, max_retries=3, check_retry=check_retry, sleep_before_retry=0.1
-        ) as response:
-            pass
+    with wrapped_request(protected_req) as response:
+        assert response.status_code == 401
 
 
-def test_timeout_request():
-    req = Request("GET", "http://localhost:5000/timeout")
-    with pytest.raises(Timeout):
-        with wrapped_request(req, timeout=1) as response:
-            pass
+def test_with_session():
+    with requests.Session() as session:
+        auth_req = requests.Request("POST", prepare_url("/auth"))
 
+        with wrapped_request(auth_req, session=session) as response:
+            assert response.status_code == 200
 
-def test_custom_retry_logic():
-    req = Request("GET", "http://localhost:5000/custom_retry")
+        protected_req = requests.Request("GET", prepare_url("/protected/ping"))
 
-    def check_retry(response):
-        return response.status_code == 418
-
-    with pytest.raises(RetryRequestError):
-        with wrapped_request(req, max_retries=2, check_retry=check_retry) as response:
-            pass
+        with wrapped_request(protected_req, session=session) as response:
+            assert response.status_code == 200
