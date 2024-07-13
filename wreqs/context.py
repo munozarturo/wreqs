@@ -1,7 +1,8 @@
 import time
-from requests import Request, Response, Session, Timeout
-from typing import Callable, Generator, Optional
 import logging
+
+from requests import Request, Response, Session, Timeout
+from typing import Any, Callable, Generator, Optional
 from contextlib import contextmanager
 from wreqs.error import RetryRequestError
 from wreqs.fmt import prettify_request_str, prettify_response_str
@@ -10,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 # todo: configure checks for rate limiting bypass
-# todo: add access to send for configuring stuff like proxies
 
 
 class RequestContext:
@@ -22,6 +22,7 @@ class RequestContext:
         sleep_before_retry: Optional[float] = None,
         session: Optional[Session] = None,
         timeout: Optional[float] = None,
+        **send_config: dict[str, Any],
     ) -> None:
         self.logger = logger
         self.request = request
@@ -31,6 +32,7 @@ class RequestContext:
         self.check_retry = check_retry
         self.sleep_before_retry = sleep_before_retry
         self.timeout = timeout
+        self.send_config = send_config
 
         self.logger.info(f"RequestContext initialized: {prettify_request_str(request)}")
         self.logger.debug(
@@ -50,7 +52,9 @@ class RequestContext:
         prepared_request = self.session.prepare_request(self.request)
 
         try:
-            response = self.session.send(prepared_request, timeout=self.timeout)
+            response = self.session.send(
+                prepared_request, timeout=self.timeout, **self.send_config
+            )
             self.logger.info(f"Received response: {prettify_response_str(response)}")
         except Timeout:
             self.logger.error(f"Request timed out after {self.timeout}s")
