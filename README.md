@@ -335,7 +335,7 @@ except requests.RequestException as e:
 
 ```bash
 pip install pytest
-python pytest -m
+pytest
 ```
 
 ## Packaging
