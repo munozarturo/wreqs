@@ -1,6 +1,13 @@
-# Wrapped Requests "wreqs" module
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://www.munozarturo.com/images/wreqs-logo-long-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://www.munozarturo.com/images/wreqs-logo-long-light.svg">
+    <img alt="wreqs" src="https://www.munozarturo.com/images/wreqs-logo-long-light.svg" width="50%" height="40%">
+  </picture>
+</p>
 
-## Introduction
+<!-- omit from toc -->
+# wreqs: wrapped requests
 
 The `wreqs` module is a powerful wrapper around the popular `requests` library, designed to simplify and enhance HTTP request handling in Python. It provides a context manager for making HTTP requests with built-in retry logic, timeout handling, and session management.
 
@@ -11,6 +18,25 @@ Key features:
 - Timeout handling
 - Session management
 - Flexible logging capabilities
+
+<!-- omit from toc -->
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start Guide](#quick-start-guide)
+- [Advanced Usage](#advanced-usage)
+  - [Making Multiple Requests with the Same Session](#making-multiple-requests-with-the-same-session)
+  - [Implementing Custom Retry Logic](#implementing-custom-retry-logic)
+  - [Handling Timeouts](#handling-timeouts)
+  - [Using Retry Callbacks](#using-retry-callbacks)
+- [Logging Configuration](#logging-configuration)
+  - [Default Logging](#default-logging)
+  - [Configuring the Logger](#configuring-the-logger)
+  - [Using a Custom Logger](#using-a-custom-logger)
+- [Error Handling](#error-handling)
+  - [RetryRequestError](#retryrequesterror)
+  - [Other Exceptions](#other-exceptions)
+  - [Best Practices for Error Handling](#best-practices-for-error-handling)
 
 ## Installation
 
@@ -317,11 +343,3 @@ except requests.RequestException as e:
 5. **Use specific exception types**: Catch specific exceptions when you know how to handle them, and use a general exception handler as a fallback.
 
 By following these practices and understanding the errors that can occur, you can build robust applications that gracefully handle network issues and API errors when using the `wreqs` module.
-
-## License
-
-(Information about the project's license)
-
-## Changelog
-
-(Version history and notable changes)
