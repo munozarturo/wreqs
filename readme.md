@@ -36,7 +36,6 @@ Key features:
 - [Error Handling](#error-handling)
   - [RetryRequestError](#retryrequesterror)
   - [Other Exceptions](#other-exceptions)
-  - [Best Practices for Error Handling](#best-practices-for-error-handling)
 
 ## Installation
 
@@ -329,17 +328,3 @@ except requests.ConnectionError:
 except requests.RequestException as e:
     print(f"An error occurred while handling the request: {e}")
 ```
-
-### Best Practices for Error Handling
-
-1. **Use try/except**: Wrap your `wrapped_request` calls in try/except blocks to catch and handle potential errors gracefully.
-
-2. **Log errors**: Instead of just printing error messages, consider using Python's logging module to log errors for better debugging and monitoring.
-
-3. **Provide fallback behavior**: When an error occurs, have a plan for how your application should proceed. This might involve retrying the request later, using cached data, or notifying the user.
-
-4. **Check response status**: Even when no exception is raised, always check the response status code to ensure the request was successful.
-
-5. **Use specific exception types**: Catch specific exceptions when you know how to handle them, and use a general exception handler as a fallback.
-
-By following these practices and understanding the errors that can occur, you can build robust applications that gracefully handle network issues and API errors when using the `wreqs` module.
