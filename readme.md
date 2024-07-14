@@ -9,7 +9,7 @@
 <!-- omit from toc -->
 # wreqs: wrapped requests
 
-The `wreqs` module is a powerful wrapper around the popular `requests` library, designed to simplify and enhance HTTP request handling in Python. It provides a context manager for making HTTP requests with built-in retry logic, timeout handling, and session management.
+The **wreqs** module is a powerful wrapper around the popular `requests` library, designed to simplify and enhance HTTP request handling in Python. It provides a context manager for making HTTP requests with built-in retry logic, timeout handling, and session management.
 
 Key features:
 
