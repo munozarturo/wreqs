@@ -36,6 +36,8 @@ Key features:
 - [Error Handling](#error-handling)
   - [RetryRequestError](#retryrequesterror)
   - [Other Exceptions](#other-exceptions)
+- [Testing](#testing)
+- [Packaging](#packaging)
 
 ## Installation
 
@@ -327,4 +329,19 @@ except requests.ConnectionError:
     print("A network error occurred")
 except requests.RequestException as e:
     print(f"An error occurred while handling the request: {e}")
+```
+
+## Testing
+
+```bash
+pip install pytest
+python pytest -m
+```
+
+## Packaging
+
+```bash
+pip install --upgrade setuptools wheel twine
+python setup.py sdist bdist_wheel
+twine upload dist/*
 ```
