@@ -9,9 +9,6 @@ from wreqs.fmt import prettify_request_str, prettify_response_str
 logger = logging.getLogger(__name__)
 
 
-# todo: configure checks for rate limiting bypass
-
-
 class RequestContext:
     def __init__(
         self,
@@ -23,6 +20,69 @@ class RequestContext:
         timeout: Optional[float] = None,
         **send_config: dict[str, Any],
     ) -> None:
+        """A context manager for making HTTP requests with retry and timeout capabilities.
+
+        This context manager provides a convenient way to make HTTP requests with built-in
+        retry logic, timeout handling, and session management.
+
+        Args:
+            request (Request): The Request object representing the HTTP request to be made.
+            max_retries (int, optional): The maximum number of retry attempts. Defaults to 3.
+            check_retry (Optional[Callable[[Response], bool]], optional): A function that takes
+                a Response object and returns True if a retry should be attempted, False otherwise.
+                If None, no retries will be attempted. Defaults to None.
+            retry_callback (Optional[Callable[[Response], None]], optional): A function to be
+                called before each retry attempt. It takes a Response object and returns None.
+                Defaults to None.
+            session (Optional[Session], optional): A requests Session object to be used for
+                making the request. If None, a new Session will be created. Defaults to None.
+            timeout (Optional[float], optional): The timeout in seconds for the request.
+                Defaults to None.
+
+        Yields:
+            Response: The Response object from the successful request.
+
+        Raises:
+            RetryRequestError: If the maximum number of retries is reached without a successful response.
+            Timeout: If the request times out.
+
+        Example:
+            Making a simple GET request:
+            ```python
+            import requests
+            from wreqs import wrapped_request
+
+            req = requests.Request('GET', 'https://api.example.com/data')
+            with wrapped_request(req) as response:
+                print(response.status_code)
+                print(response.json())
+            ```
+
+            Making a request with retry logic:
+            ```python
+            def check_retry(response):
+                return response.status_code >= 500
+
+            req = requests.Request('POST', 'https://api.example.com/data', json={'key': 'value'})
+            with wrapped_request(req, max_retries=5, check_retry=check_retry) as response:
+                print(response.status_code)
+            ```
+
+            Using a custom session and timeout:
+            ```python
+            session = requests.Session()
+            session.headers.update({'Authorization': 'Bearer token'})
+
+            req = requests.Request('GET', 'https://api.example.com/protected')
+            with wrapped_request(req, session=session, timeout=10) as response:
+                print(response.text)
+            ```
+
+        Notes:
+            - The context manager automatically closes the session when exiting the context.
+            - If a custom session is provided, it will be used for all requests, including retries.
+            - The retry_callback can be useful for implementing backoff strategies or logging.
+        """
         self.logger = logger
         self.request = request
         self.response: Optional[Response] = None
@@ -138,6 +198,69 @@ def wrapped_request(
     session: Optional[Session] = None,
     timeout: Optional[float] = None,
 ) -> Generator[Response, None, None]:
+    """A context manager for making HTTP requests with retry and timeout capabilities.
+
+    This context manager provides a convenient way to make HTTP requests with built-in
+    retry logic, timeout handling, and session management.
+
+    Args:
+        request (Request): The Request object representing the HTTP request to be made.
+        max_retries (int, optional): The maximum number of retry attempts. Defaults to 3.
+        check_retry (Optional[Callable[[Response], bool]], optional): A function that takes
+            a Response object and returns True if a retry should be attempted, False otherwise.
+            If None, no retries will be attempted. Defaults to None.
+        retry_callback (Optional[Callable[[Response], None]], optional): A function to be
+            called before each retry attempt. It takes a Response object and returns None.
+            Defaults to None.
+        session (Optional[Session], optional): A requests Session object to be used for
+            making the request. If None, a new Session will be created. Defaults to None.
+        timeout (Optional[float], optional): The timeout in seconds for the request.
+            Defaults to None.
+
+    Yields:
+        Response: The Response object from the successful request.
+
+    Raises:
+        RetryRequestError: If the maximum number of retries is reached without a successful response.
+        Timeout: If the request times out.
+
+    Example:
+        Making a simple GET request:
+        ```python
+        import requests
+        from wreqs import wrapped_request
+
+        req = requests.Request('GET', 'https://api.example.com/data')
+        with wrapped_request(req) as response:
+            print(response.status_code)
+            print(response.json())
+        ```
+
+        Making a request with retry logic:
+        ```python
+        def check_retry(response):
+            return response.status_code >= 500
+
+        req = requests.Request('POST', 'https://api.example.com/data', json={'key': 'value'})
+        with wrapped_request(req, max_retries=5, check_retry=check_retry) as response:
+            print(response.status_code)
+        ```
+
+        Using a custom session and timeout:
+        ```python
+        session = requests.Session()
+        session.headers.update({'Authorization': 'Bearer token'})
+
+        req = requests.Request('GET', 'https://api.example.com/protected')
+        with wrapped_request(req, session=session, timeout=10) as response:
+            print(response.text)
+        ```
+
+    Notes:
+        - The context manager automatically closes the session when exiting the context.
+        - If a custom session is provided, it will be used for all requests, including retries.
+        - The retry_callback can be useful for implementing backoff strategies or logging.
+    """
     context = RequestContext(
         req,
         max_retries,
@@ -158,6 +281,69 @@ def configure_logger(
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     filename: Optional[str] = None,
 ) -> None:
+    """Configure the logger for the wreqs module.
+
+    This function allows customization of the logger used by the wreqs module. It can
+    either use a provided custom logger or configure the default logger with specified
+    parameters.
+
+    Args:
+        custom_logger (Optional[logging.Logger], optional): A custom logger to be used
+            instead of the default one. If provided, all other parameters are ignored.
+            Defaults to None.
+        level (int, optional): The logging level to be set. Uses standard logging level
+            constants (e.g., logging.INFO, logging.DEBUG). Defaults to logging.INFO.
+        format (str, optional): The format string for the log messages.
+            Defaults to "%(asctime)s - %(name)s - %(levelname)s - %(message)s".
+        filename (Optional[str], optional): If provided, logs will be written to this file.
+            If None, logs will be written to the console. Defaults to None.
+
+    Returns:
+        None
+
+    Example:
+        Using default settings:
+        ```python
+        from wreqs import configure_logger
+
+        configure_logger()
+        ```
+
+        Customizing log level and format:
+        ```python
+        import logging
+        from wreqs import configure_logger
+
+        configure_logger(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        ```
+
+        Logging to a file:
+        ```python
+        from wreqs import configure_logger
+
+        configure_logger(filename='wreqs.log')
+        ```
+
+        Using a custom logger:
+        ```python
+        import logging
+        from wreqs import configure_logger
+
+        custom_logger = logging.getLogger('my_app.wreqs')
+        custom_logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        custom_logger.addHandler(handler)
+
+        configure_logger(custom_logger=custom_logger)
+        ```
+
+    Notes:
+        - This function modifies the global `logger` variable used throughout the wreqs module.
+        - If a custom logger is provided, it will be used as-is, and all other parameters will be ignored.
+        - When not using a custom logger, this function removes all existing handlers before adding the new one.
+        - The default format includes timestamp, logger name, log level, and message.
+    """
     global logger
     if custom_logger:
         logger = custom_logger
