@@ -40,7 +40,6 @@ Key features:
   - [Testing](#testing)
   - [CI/CD](#cicd)
   - [Publishing a New Version](#publishing-a-new-version)
-  - [Manual Publishing (if needed)](#manual-publishing-if-needed)
 
 ## Installation
 
@@ -354,48 +353,43 @@ This project uses GitHub Actions for Continuous Integration and Continuous Deplo
 
 ### Publishing a New Version
 
-1. Update the version in `setup.py` following [Semantic Versioning](https://semver.org/).
+1. Create a new branch for the version bump:
 
-2. Commit changes:
+   """bash
+   git checkout -b bump-version-x.y.z
+   """
 
-   ```bash
+2. Update the version in `setup.py` following [Semantic Versioning](https://semver.org/).
+
+3. Commit changes:
+
+   """bash
    git add setup.py
    git commit -m "pack: bump version to x.y.z"
-   ```
+   """
 
-3. Tag and push:
+4. Push the branch and create a pull request:
 
-   ```bash
+   """bash
+   git push origin bump-version-x.y.z
+   """
+
+   Then create a pull request on GitHub from this branch to main.
+
+5. After the pull request is approved and merged, checkout and pull the updated main branch:
+
+   """bash
+   git checkout main
+   git pull origin main
+   """
+
+6. Create and push a new tag:
+
+   """bash
    git tag vx.y.z
-   git push origin main vx.y.z
-   ```
+   git push origin vx.y.z
+   """
 
    Replace `x.y.z` with the new version number.
 
-4. The GitHub Action will automatically build and publish the new version to PyPI.
-
-### Manual Publishing (if needed)
-
-Prerequisites:
-
-```bash
-pip install --upgrade setuptools wheel twine build
-```
-
-Build and publish:
-
-```bash
-rm -rf dist build *.egg-info
-python -m build
-twine check dist/*
-twine upload dist/*
-```
-
-For TestPyPI (optional):
-
-```bash
-twine upload --repository testpypi dist/*
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ wreqs
-```
-
-Note: Manual publishing should only be necessary if the automated process fails.
+7. The GitHub Action will automatically build, test, and publish the new version to PyPI.
