@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.munozarturo.com/images/wreqs-logo-long-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://www.munozarturo.com/images/wreqs-logo-long-light.svg">
-    <img alt="wreqs" src="https://www.munozarturo.com/images/wreqs-logo-long-light.svg" width="50%" height="40%">
+    <source media="(prefers-color-scheme: dark)" srcset="https://www.munozarturo.com/assets/wreqs/logo-long-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://www.munozarturo.com/assets/wreqs/logo-long-light.svg">
+    <img alt="wreqs" src="https://www.munozarturo.com/assets/wreqs/logo-long-light.svg" width="50%" height="40%">
   </picture>
 </p>
 
