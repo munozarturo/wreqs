@@ -6,7 +6,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="wreqs",
-    version="0.1.1",
+    version="0.1.2",
     author="Arturo Munoz",
     author_email="munoz.arturoroman@gmail.com",
     description="Simplified and enhanced request handling.",
@@ -28,7 +28,7 @@ setup(
     python_requires=">=3.11",
     install_requires=["requests>=2.32.3"],
     extras_require={
-        "dev": ["pytest", "pytest-cov", "flake8", "black"],
+        "dev": ["pytest", "pytest-cov", "flask", "mypy", "flake8", "black"],
         "docs": ["sphinx", "sphinx_rtd_theme"],
     },
     project_urls={
