@@ -45,7 +45,6 @@ Key features:
   - [Publishing to PyPI](#publishing-to-pypi)
   - [Versioning](#versioning)
   - [Git Tagging](#git-tagging)
-  - [Continuous Integration](#continuous-integration)
 
 ## Installation
 
@@ -414,7 +413,3 @@ After a successful publish, tag your release in git:
 
 git tag v0.1.x  # Replace with your version number
 git push origin v0.1.x
-
-### Continuous Integration
-
-Consider setting up a CI/CD pipeline (e.g., GitHub Actions) to automate testing and deployment processes.
