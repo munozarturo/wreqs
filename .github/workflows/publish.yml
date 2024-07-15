@@ -3,7 +3,7 @@ name: Publish Python distribution to PyPI
 on:
     push:
         tags:
-            - "v*" # Trigger on push of version tags (e.g., v0.1.0)
+            - "v*"
         branches:
             - main
 
@@ -25,6 +25,11 @@ jobs:
                   python -m pip install --upgrade pip
                   pip install build twine
                   pip install .[dev]
+
+            - name: Start Flask Server
+              run: |
+                  python tests/app.py &
+                  sleep 1
 
             - name: Run tests
               run: |
