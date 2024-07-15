@@ -347,8 +347,6 @@ pytest
 
 ## Packaging and Publishing
 
-This guide will help you package and publish `wreqs` to PyPI.
-
 ### Prerequisites
 
 Ensure you have the latest versions of required tools:
