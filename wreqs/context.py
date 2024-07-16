@@ -3,10 +3,15 @@ import logging
 from requests import Request, Response, Session, Timeout
 from typing import Any, Callable, Generator, Optional
 from contextlib import contextmanager
+from contextvars import ContextVar
 from wreqs.error import RetryRequestError
 from wreqs.fmt import prettify_request_str, prettify_response_str
 
 logger = logging.getLogger(__name__)
+
+_wreqs_session: ContextVar[Optional[Session]] = ContextVar(
+    "_wreqs_session", default=None
+)
 
 
 class RequestContext:
@@ -52,7 +57,7 @@ class RequestContext:
             import requests
             from wreqs import wreq
 
-            req = requests.Request('GET', 'https://api.example.com/data')
+            req = requests.Request("GET", "https://api.example.com/data")
             with wreq(req) as response:
                 print(response.status_code)
                 print(response.json())
@@ -63,7 +68,7 @@ class RequestContext:
             def check_retry(response):
                 return response.status_code >= 500
 
-            req = requests.Request('POST', 'https://api.example.com/data', json={'key': 'value'})
+            req = requests.Request("POST", "https://api.example.com/data", json={"key": "value"})
             with wreq(req, max_retries=5, check_retry=check_retry) as response:
                 print(response.status_code)
             ```
@@ -71,9 +76,9 @@ class RequestContext:
             Using a custom session and timeout:
             ```python
             session = requests.Session()
-            session.headers.update({'Authorization': 'Bearer token'})
+            session.headers.update({"Authorization": "Bearer token"})
 
-            req = requests.Request('GET', 'https://api.example.com/protected')
+            req = requests.Request("GET", "https://api.example.com/protected")
             with wreq(req, session=session, timeout=10) as response:
                 print(response.text)
             ```
@@ -230,7 +235,7 @@ def wreq(
         import requests
         from wreqs import wreq
 
-        req = requests.Request('GET', 'https://api.example.com/data')
+        req = requests.Request("GET", "https://api.example.com/data")
         with wreq(req) as response:
             print(response.status_code)
             print(response.json())
@@ -241,7 +246,7 @@ def wreq(
         def check_retry(response):
             return response.status_code >= 500
 
-        req = requests.Request('POST', 'https://api.example.com/data', json={'key': 'value'})
+        req = requests.Request("POST", "https://api.example.com/data", json={"key": "value"})
         with wreq(req, max_retries=5, check_retry=check_retry) as response:
             print(response.status_code)
         ```
@@ -249,9 +254,9 @@ def wreq(
         Using a custom session and timeout:
         ```python
         session = requests.Session()
-        session.headers.update({'Authorization': 'Bearer token'})
+        session.headers.update({"Authorization": "Bearer token"})
 
-        req = requests.Request('GET', 'https://api.example.com/protected')
+        req = requests.Request("GET", "https://api.example.com/protected")
         with wreq(req, session=session, timeout=10) as response:
             print(response.text)
         ```
@@ -261,6 +266,9 @@ def wreq(
         - If a custom session is provided, it will be used for all requests, including retries.
         - The retry_callback can be useful for implementing backoff strategies or logging.
     """
+    if session is None:
+        session = _wreqs_session.get()
+
     context = RequestContext(
         req,
         max_retries,
@@ -273,6 +281,17 @@ def wreq(
         yield context.__enter__()
     finally:
         context.__exit__(None, None, None)
+
+
+@contextmanager
+def wreqs_session():
+    session = Session()
+    token = _wreqs_session.set(session)
+    try:
+        yield session
+    finally:
+        _wreqs_session.reset(token)
+        session.close()
 
 
 def configure_logger(
@@ -314,14 +333,14 @@ def configure_logger(
         import logging
         from wreqs import configure_logger
 
-        configure_logger(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        configure_logger(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
         ```
 
         Logging to a file:
         ```python
         from wreqs import configure_logger
 
-        configure_logger(filename='wreqs.log')
+        configure_logger(filename="wreqs.log")
         ```
 
         Using a custom logger:
@@ -329,10 +348,10 @@ def configure_logger(
         import logging
         from wreqs import configure_logger
 
-        custom_logger = logging.getLogger('my_app.wreqs')
+        custom_logger = logging.getLogger("my_app.wreqs")
         custom_logger.setLevel(logging.INFO)
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
         custom_logger.addHandler(handler)
 
         configure_logger(custom_logger=custom_logger)

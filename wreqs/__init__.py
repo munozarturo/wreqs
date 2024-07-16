@@ -1,1 +1,1 @@
-from wreqs.context import wreq, RequestContext, configure_logger
+from wreqs.context import wreq, wreqs_session, RequestContext, configure_logger
