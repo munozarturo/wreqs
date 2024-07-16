@@ -1,9 +1,9 @@
 import logging
 
 from requests import Request, Response, Session, Timeout
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Callable, ContextManager, Generator, Optional
 from contextlib import contextmanager
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from wreqs.error import RetryRequestError
 from wreqs.fmt import prettify_request_str, prettify_response_str
 
@@ -283,15 +283,61 @@ def wreq(
         context.__exit__(None, None, None)
 
 
+wreq_context: ContextManager[Session] = wreq
+
+
 @contextmanager
-def wreqs_session():
+def wreqs_session() -> Generator[Session, None, None]:
+    """
+    A context manager that creates and manages a requests.Session object for use with wreq functions.
+
+    This context manager creates a new Session object, sets it as the active session for the current context,
+    yields the session for use within the context, and ensures proper cleanup when the context is exited.
+
+    Usage:
+        with wreqs_session() as session:
+            # Use wreq functions without explicitly passing the session
+            with wreq(Request('GET', 'https://api.example.com')) as response:
+                print(response.json())
+
+    Yields:
+        Session: A requests.Session object that can be used for making HTTP requests.
+
+    Example:
+        ```python
+        from wreqs import wreqs_session, wreq
+        from requests import Request
+        >>>
+        def fetch_user(user_id: int) -> dict:
+            with wreqs_session():
+                request = Request('GET', f'https://api.example.com/users/{user_id}')
+                with wreq(request) as response:
+                    return response.json()
+        ...
+        user_data = fetch_user(123)
+        print(user_data)
+        {'id': 123, 'name': 'John Doe', 'email': 'john@example.com'}
+        ```
+
+    Notes:
+        - This context manager automatically handles session creation and cleanup.
+        - It sets the created session as the active session for all wreq calls within its context.
+        - The session is automatically closed when exiting the context, ensuring proper resource management.
+        - This function is particularly useful when making multiple requests that should share a session.
+
+    See Also:
+        wreq: The main function for making HTTP requests within the wreqs framework.
+    """
     session = Session()
-    token = _wreqs_session.set(session)
+    token: Token = _wreqs_session.set(session)
     try:
         yield session
     finally:
         _wreqs_session.reset(token)
         session.close()
+
+
+wreqs_session_context: ContextManager[Session] = wreqs_session
 
 
 def configure_logger(
