@@ -283,9 +283,6 @@ def wreq(
         context.__exit__(None, None, None)
 
 
-wreq_context: ContextManager[Session] = wreq
-
-
 @contextmanager
 def wreqs_session() -> Generator[Session, None, None]:
     """
@@ -335,9 +332,6 @@ def wreqs_session() -> Generator[Session, None, None]:
     finally:
         _wreqs_session.reset(token)
         session.close()
-
-
-wreqs_session_context: ContextManager[Session] = wreqs_session
 
 
 def configure_logger(
