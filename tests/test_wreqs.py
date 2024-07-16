@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 import requests
-from wreqs import wrapped_request
+from wreqs import wreq
 from wreqs.error import RetryRequestError
 
 
@@ -34,14 +34,14 @@ def start_server():
 def test_simple():
     req = requests.Request("GET", prepare_url("/ping"))
 
-    with wrapped_request(req) as response:
+    with wreq(req) as response:
         assert response.status_code == 200
 
 
 def test_with_session_pre_reqs():
     protected_req = requests.Request("GET", prepare_url("/protected/ping"))
 
-    with wrapped_request(protected_req) as response:
+    with wreq(protected_req) as response:
         assert response.status_code == 401
 
 
@@ -49,12 +49,12 @@ def test_with_session():
     with requests.Session() as session:
         auth_req = requests.Request("POST", prepare_url("/auth"))
 
-        with wrapped_request(auth_req, session=session) as response:
+        with wreq(auth_req, session=session) as response:
             assert response.status_code == 200
 
         protected_req = requests.Request("GET", prepare_url("/protected/ping"))
 
-        with wrapped_request(protected_req, session=session) as response:
+        with wreq(protected_req, session=session) as response:
             assert response.status_code == 200
 
 
@@ -62,11 +62,11 @@ def test_timeout():
     timeout: float = 4
     req = requests.Request("POST", prepare_url("/timeout"), json={"timeout": timeout})
 
-    with wrapped_request(req, timeout=timeout + 1) as response:
+    with wreq(req, timeout=timeout + 1) as response:
         assert response.status_code == 200
 
     with pytest.raises(requests.Timeout):
-        with wrapped_request(req, timeout=timeout - 0.5) as _:
+        with wreq(req, timeout=timeout - 0.5) as _:
             pytest.fail()
 
 
@@ -82,7 +82,7 @@ def test_with_retry_pre_reqs():
         return res.status_code != 200
 
     with pytest.raises(RetryRequestError):
-        with wrapped_request(req, check_retry=retry_if_not_success) as _:
+        with wreq(req, check_retry=retry_if_not_success) as _:
             pytest.fail()
 
 
@@ -97,7 +97,7 @@ def test_with_retry():
     def retry_if_not_success(res: requests.Response) -> bool:
         return res.status_code != 200
 
-    with wrapped_request(req, check_retry=retry_if_not_success) as response:
+    with wreq(req, check_retry=retry_if_not_success) as response:
         assert response.status_code == 200
 
 
@@ -112,7 +112,7 @@ def test_with_retry_modified_max():
     def retry_if_not_success(res: requests.Response) -> bool:
         return res.status_code != 200
 
-    with wrapped_request(
+    with wreq(
         req, check_retry=retry_if_not_success, max_retries=4
     ) as response:
         assert response.status_code == 200
@@ -133,7 +133,7 @@ def test_with_retry_and_retry_callback_pre_reqs():
         time.sleep(1)
 
     with pytest.raises(RetryRequestError):
-        with wrapped_request(
+        with wreq(
             req, check_retry=retry_if_not_success, retry_callback=retry_callback
         ) as _:
             pytest.fail()
@@ -153,7 +153,7 @@ def test_with_retry_and_retry_callback():
     def retry_callback(res: requests.Response) -> None:
         time.sleep(1)
 
-    with wrapped_request(
+    with wreq(
         req, check_retry=retry_if_not_success, retry_callback=retry_callback
     ) as response:
         assert response.status_code == 200

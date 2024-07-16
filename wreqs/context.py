@@ -50,10 +50,10 @@ class RequestContext:
             Making a simple GET request:
             ```python
             import requests
-            from wreqs import wrapped_request
+            from wreqs import wreq
 
             req = requests.Request('GET', 'https://api.example.com/data')
-            with wrapped_request(req) as response:
+            with wreq(req) as response:
                 print(response.status_code)
                 print(response.json())
             ```
@@ -64,7 +64,7 @@ class RequestContext:
                 return response.status_code >= 500
 
             req = requests.Request('POST', 'https://api.example.com/data', json={'key': 'value'})
-            with wrapped_request(req, max_retries=5, check_retry=check_retry) as response:
+            with wreq(req, max_retries=5, check_retry=check_retry) as response:
                 print(response.status_code)
             ```
 
@@ -74,7 +74,7 @@ class RequestContext:
             session.headers.update({'Authorization': 'Bearer token'})
 
             req = requests.Request('GET', 'https://api.example.com/protected')
-            with wrapped_request(req, session=session, timeout=10) as response:
+            with wreq(req, session=session, timeout=10) as response:
                 print(response.text)
             ```
 
@@ -190,7 +190,7 @@ class RequestContext:
 
 
 @contextmanager
-def wrapped_request(
+def wreq(
     req: Request,
     max_retries: int = 3,
     check_retry: Optional[Callable[[Response], bool]] = None,
@@ -228,10 +228,10 @@ def wrapped_request(
         Making a simple GET request:
         ```python
         import requests
-        from wreqs import wrapped_request
+        from wreqs import wreq
 
         req = requests.Request('GET', 'https://api.example.com/data')
-        with wrapped_request(req) as response:
+        with wreq(req) as response:
             print(response.status_code)
             print(response.json())
         ```
@@ -242,7 +242,7 @@ def wrapped_request(
             return response.status_code >= 500
 
         req = requests.Request('POST', 'https://api.example.com/data', json={'key': 'value'})
-        with wrapped_request(req, max_retries=5, check_retry=check_retry) as response:
+        with wreq(req, max_retries=5, check_retry=check_retry) as response:
             print(response.status_code)
         ```
 
@@ -252,7 +252,7 @@ def wrapped_request(
         session.headers.update({'Authorization': 'Bearer token'})
 
         req = requests.Request('GET', 'https://api.example.com/protected')
-        with wrapped_request(req, session=session, timeout=10) as response:
+        with wreq(req, session=session, timeout=10) as response:
             print(response.text)
         ```
 

@@ -62,7 +62,7 @@ Getting started with the `wreqs` module is simple. Follow these steps to make yo
 2. Import the necessary components:
 
    ```python
-   from wreqs import wrapped_request
+   from wreqs import wreq
    import requests
    ```
 
@@ -72,10 +72,10 @@ Getting started with the `wreqs` module is simple. Follow these steps to make yo
    req = requests.Request('GET', 'https://api.example.com/data')
    ```
 
-4. Use the `wrapped_request` context manager to make the request:
+4. Use the `wreq` context manager to make the request:
 
    ```python
-   with wrapped_request(req) as response:
+   with wreq(req) as response:
        print(response.status_code)
        print(response.json())
    ```
@@ -85,7 +85,7 @@ That's it! You've now made a request using `wreqs`. This simple example demonstr
 Here's a slightly more advanced example that includes a retry check:
 
 ```python
-from wreqs import wrapped_request
+from wreqs import wreq
 import requests
 
 def check_retry(response):
@@ -93,7 +93,7 @@ def check_retry(response):
 
 req = requests.Request('GET', 'https://api.example.com/data')
 
-with wrapped_request(req, max_retries=3, check_retry=check_retry) as response:
+with wreq(req, max_retries=3, check_retry=check_retry) as response:
     if response.status_code == 200:
         print("Success:", response.json())
     else:
@@ -116,7 +116,7 @@ Here's an example that demonstrates how to use a single session for authenticati
 
 ```python
 import requests
-from wreqs import wrapped_request
+from wreqs import wreq
 
 # Create a session
 session = requests.Session()
@@ -127,7 +127,7 @@ auth_req = requests.Request('POST', 'https://api.example.com/login', json={
     'password': 'pass'
 })
 
-with wrapped_request(auth_req, session=session) as auth_response:
+with wreq(auth_req, session=session) as auth_response:
     if auth_response.status_code == 200:
         print("Authentication successful")
     else:
@@ -137,7 +137,7 @@ with wrapped_request(auth_req, session=session) as auth_response:
 # Data request using the same authenticated session
 data_req = requests.Request('GET', 'https://api.example.com/protected-data')
 
-with wrapped_request(data_req, session=session) as data_response:
+with wreq(data_req, session=session) as data_response:
     if data_response.status_code == 200:
         print("Data retrieved successfully:", data_response.json())
     else:
@@ -154,7 +154,7 @@ Here's an example that retries on specific status codes and implements an expone
 
 ```python
 import time
-from wreqs import wrapped_request
+from wreqs import wreq
 import requests
 
 def check_retry_with_backoff(response):
@@ -166,7 +166,7 @@ def check_retry_with_backoff(response):
 
 req = requests.Request('GET', 'https://api.example.com/data')
 
-with wrapped_request(req, max_retries=5, check_retry=check_retry_with_backoff) as response:
+with wreq(req, max_retries=5, check_retry=check_retry_with_backoff) as response:
     print(response.status_code)
     print(response.json())
 ```
@@ -178,13 +178,13 @@ This example retries on specific status codes and implements an exponential back
 `wreqs` allows you to set timeouts for your requests to prevent them from hanging indefinitely. Here's how you can use the timeout feature:
 
 ```python
-from wreqs import wrapped_request
+from wreqs import wreq
 import requests
 
 req = requests.Request('GET', 'https://api.example.com/slow-endpoint')
 
 try:
-    with wrapped_request(req, timeout=5) as response:
+    with wreq(req, timeout=5) as response:
         print(response.json())
 except requests.Timeout:
     print("The request timed out after 5 seconds")
@@ -198,7 +198,7 @@ You can use the `retry_callback` parameter to perform actions before each retry 
 
 ```python
 import time
-from wreqs import wrapped_request
+from wreqs import wreq
 import requests
 
 def retry_callback(response):
@@ -207,7 +207,7 @@ def retry_callback(response):
 
 req = requests.Request('GET', 'https://api.example.com/unstable-endpoint')
 
-with wrapped_request(req, max_retries=3, check_retry=lambda r: r.status_code >= 500, retry_callback=retry_callback) as response:
+with wreq(req, max_retries=3, check_retry=lambda r: r.status_code >= 500, retry_callback=retry_callback) as response:
     print("Final response status code:", response.status_code)
 ```
 
@@ -217,7 +217,7 @@ These advanced usage examples demonstrate the flexibility and power of the `wreq
 
 ## Logging Configuration
 
-The `wreqs` module provides flexible logging capabilities to help you track and debug your HTTP requests. You can configure logging at the module level, which will apply to all subsequent uses of `wrapped_request`.
+The `wreqs` module provides flexible logging capabilities to help you track and debug your HTTP requests. You can configure logging at the module level, which will apply to all subsequent uses of `wreq`.
 
 ### Default Logging
 
@@ -226,7 +226,7 @@ Out of the box, `wreqs` uses a default logger with minimal configuration:
 ```python
 import wreqs
 
-context = wreqs.wrapped_request(some_request)
+context = wreqs.wreq(some_request)
 ```
 
 This will use the default logger, which outputs to the console at the INFO level.
@@ -246,8 +246,8 @@ wreqs.configure_logger(
 )
 
 # All subsequent calls will use this logger configuration
-context1 = wreqs.wrapped_request(some_request)
-context2 = wreqs.wrapped_request(another_request)
+context1 = wreqs.wreq(some_request)
+context2 = wreqs.wreq(another_request)
 ```
 
 ### Using a Custom Logger
@@ -269,7 +269,7 @@ custom_logger.setLevel(logging.INFO)
 wreqs.configure_logger(custom_logger=custom_logger)
 
 # All subsequent calls will use this custom logger
-context = wreqs.wrapped_request(some_request)
+context = wreqs.wreq(some_request)
 ```
 
 ## Error Handling
@@ -283,7 +283,7 @@ The primary exception you'll encounter when using `wreqs` is the `RetryRequestEr
 Here's an example of how to handle this error:
 
 ```python
-from wreqs import wrapped_request, RetryRequestError
+from wreqs import wreq, RetryRequestError
 import requests
 
 def check_retry(response):
@@ -292,7 +292,7 @@ def check_retry(response):
 req = requests.Request('GET', 'https://api.example.com/unstable-endpoint')
 
 try:
-    with wrapped_request(req, max_retries=3, check_retry=check_retry) as response:
+    with wreq(req, max_retries=3, check_retry=check_retry) as response:
         print("Success:", response.json())
 except RetryRequestError as e:
     print(f"All retry attempts failed: {e}")
@@ -315,13 +315,13 @@ While `RetryRequestError` is specific to `wreqs`, you should also be prepared to
 Here's an example of how to handle these exceptions:
 
 ```python
-from wreqs import wrapped_request, RetryRequestError
+from wreqs import wreq, RetryRequestError
 import requests
 
 req = requests.Request('GET', 'https://api.example.com/data')
 
 try:
-    with wrapped_request(req, timeout=5) as response:
+    with wreq(req, timeout=5) as response:
         print("Success:", response.json())
 except RetryRequestError as e:
     print(f"All retry attempts failed: {e}")
