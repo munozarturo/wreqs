@@ -1,12 +1,17 @@
 import logging
 
 from requests import Request, Response, Session, Timeout
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Callable, ContextManager, Generator, Optional
 from contextlib import contextmanager
+from contextvars import ContextVar, Token
 from wreqs.error import RetryRequestError
 from wreqs.fmt import prettify_request_str, prettify_response_str
 
 logger = logging.getLogger(__name__)
+
+_wreqs_session: ContextVar[Optional[Session]] = ContextVar(
+    "_wreqs_session", default=None
+)
 
 
 class RequestContext:
@@ -50,10 +55,10 @@ class RequestContext:
             Making a simple GET request:
             ```python
             import requests
-            from wreqs import wrapped_request
+            from wreqs import wreq
 
-            req = requests.Request('GET', 'https://api.example.com/data')
-            with wrapped_request(req) as response:
+            req = requests.Request("GET", "https://api.example.com/data")
+            with wreq(req) as response:
                 print(response.status_code)
                 print(response.json())
             ```
@@ -63,18 +68,18 @@ class RequestContext:
             def check_retry(response):
                 return response.status_code >= 500
 
-            req = requests.Request('POST', 'https://api.example.com/data', json={'key': 'value'})
-            with wrapped_request(req, max_retries=5, check_retry=check_retry) as response:
+            req = requests.Request("POST", "https://api.example.com/data", json={"key": "value"})
+            with wreq(req, max_retries=5, check_retry=check_retry) as response:
                 print(response.status_code)
             ```
 
             Using a custom session and timeout:
             ```python
             session = requests.Session()
-            session.headers.update({'Authorization': 'Bearer token'})
+            session.headers.update({"Authorization": "Bearer token"})
 
-            req = requests.Request('GET', 'https://api.example.com/protected')
-            with wrapped_request(req, session=session, timeout=10) as response:
+            req = requests.Request("GET", "https://api.example.com/protected")
+            with wreq(req, session=session, timeout=10) as response:
                 print(response.text)
             ```
 
@@ -190,7 +195,7 @@ class RequestContext:
 
 
 @contextmanager
-def wrapped_request(
+def wreq(
     req: Request,
     max_retries: int = 3,
     check_retry: Optional[Callable[[Response], bool]] = None,
@@ -228,10 +233,10 @@ def wrapped_request(
         Making a simple GET request:
         ```python
         import requests
-        from wreqs import wrapped_request
+        from wreqs import wreq
 
-        req = requests.Request('GET', 'https://api.example.com/data')
-        with wrapped_request(req) as response:
+        req = requests.Request("GET", "https://api.example.com/data")
+        with wreq(req) as response:
             print(response.status_code)
             print(response.json())
         ```
@@ -241,18 +246,18 @@ def wrapped_request(
         def check_retry(response):
             return response.status_code >= 500
 
-        req = requests.Request('POST', 'https://api.example.com/data', json={'key': 'value'})
-        with wrapped_request(req, max_retries=5, check_retry=check_retry) as response:
+        req = requests.Request("POST", "https://api.example.com/data", json={"key": "value"})
+        with wreq(req, max_retries=5, check_retry=check_retry) as response:
             print(response.status_code)
         ```
 
         Using a custom session and timeout:
         ```python
         session = requests.Session()
-        session.headers.update({'Authorization': 'Bearer token'})
+        session.headers.update({"Authorization": "Bearer token"})
 
-        req = requests.Request('GET', 'https://api.example.com/protected')
-        with wrapped_request(req, session=session, timeout=10) as response:
+        req = requests.Request("GET", "https://api.example.com/protected")
+        with wreq(req, session=session, timeout=10) as response:
             print(response.text)
         ```
 
@@ -261,6 +266,9 @@ def wrapped_request(
         - If a custom session is provided, it will be used for all requests, including retries.
         - The retry_callback can be useful for implementing backoff strategies or logging.
     """
+    if session is None:
+        session = _wreqs_session.get()
+
     context = RequestContext(
         req,
         max_retries,
@@ -273,6 +281,57 @@ def wrapped_request(
         yield context.__enter__()
     finally:
         context.__exit__(None, None, None)
+
+
+@contextmanager
+def wreqs_session() -> Generator[Session, None, None]:
+    """
+    A context manager that creates and manages a requests.Session object for use with wreq functions.
+
+    This context manager creates a new Session object, sets it as the active session for the current context,
+    yields the session for use within the context, and ensures proper cleanup when the context is exited.
+
+    Usage:
+        with wreqs_session() as session:
+            # Use wreq functions without explicitly passing the session
+            with wreq(Request('GET', 'https://api.example.com')) as response:
+                print(response.json())
+
+    Yields:
+        Session: A requests.Session object that can be used for making HTTP requests.
+
+    Example:
+        ```python
+        from wreqs import wreqs_session, wreq
+        from requests import Request
+        >>>
+        def fetch_user(user_id: int) -> dict:
+            with wreqs_session():
+                request = Request('GET', f'https://api.example.com/users/{user_id}')
+                with wreq(request) as response:
+                    return response.json()
+        ...
+        user_data = fetch_user(123)
+        print(user_data)
+        {'id': 123, 'name': 'John Doe', 'email': 'john@example.com'}
+        ```
+
+    Notes:
+        - This context manager automatically handles session creation and cleanup.
+        - It sets the created session as the active session for all wreq calls within its context.
+        - The session is automatically closed when exiting the context, ensuring proper resource management.
+        - This function is particularly useful when making multiple requests that should share a session.
+
+    See Also:
+        wreq: The main function for making HTTP requests within the wreqs framework.
+    """
+    session = Session()
+    token: Token = _wreqs_session.set(session)
+    try:
+        yield session
+    finally:
+        _wreqs_session.reset(token)
+        session.close()
 
 
 def configure_logger(
@@ -314,14 +373,14 @@ def configure_logger(
         import logging
         from wreqs import configure_logger
 
-        configure_logger(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        configure_logger(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
         ```
 
         Logging to a file:
         ```python
         from wreqs import configure_logger
 
-        configure_logger(filename='wreqs.log')
+        configure_logger(filename="wreqs.log")
         ```
 
         Using a custom logger:
@@ -329,10 +388,10 @@ def configure_logger(
         import logging
         from wreqs import configure_logger
 
-        custom_logger = logging.getLogger('my_app.wreqs')
+        custom_logger = logging.getLogger("my_app.wreqs")
         custom_logger.setLevel(logging.INFO)
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
         custom_logger.addHandler(handler)
 
         configure_logger(custom_logger=custom_logger)
