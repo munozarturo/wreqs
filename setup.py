@@ -6,7 +6,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="wreqs",
-    version="1.1.0",
+    version="1.1.1",
     author="Arturo Munoz",
     author_email="munoz.arturoroman@gmail.com",
     description="Simplified and enhanced request handling.",
@@ -14,6 +14,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/munozarturo/wreqs",
     packages=find_packages(),
+    package_data={"wreqs": ["py.typed"]},
     classifiers=[
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
