@@ -1,7 +1,7 @@
 import logging
 
 from requests import Request, Response, Session, Timeout
-from typing import Any, Callable, ContextManager, Generator, Optional
+from typing import Callable, Generator, Optional
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from wreqs.error import RetryRequestError
@@ -23,12 +23,13 @@ class RequestContext:
         retry_callback: Optional[Callable[[Response], None]] = None,
         session: Optional[Session] = None,
         timeout: Optional[float] = None,
-        **send_config: dict[str, Any],
+        proxies: Optional[list[str]] = None,
     ) -> None:
-        """A context manager for making HTTP requests with retry and timeout capabilities.
+        """
+        A context manager for making HTTP requests with retry and timeout capabilities.
 
         This context manager provides a convenient way to make HTTP requests with built-in
-        retry logic, timeout handling, and session management.
+        retry logic, timeout handling, session management, and proxy rotation.
 
         Args:
             request (Request): The Request object representing the HTTP request to be made.
@@ -43,6 +44,9 @@ class RequestContext:
                 making the request. If None, a new Session will be created. Defaults to None.
             timeout (Optional[float], optional): The timeout in seconds for the request.
                 Defaults to None.
+            proxies (Optional[List[str]], optional): A list of proxy servers to use for the request.
+                If provided, wreqs will rotate through these proxies for each request or retry attempt.
+                Defaults to None.
 
         Yields:
             Response: The Response object from the successful request.
@@ -52,41 +56,27 @@ class RequestContext:
             Timeout: If the request times out.
 
         Example:
-            Making a simple GET request:
+            Making a request with proxy rotation:
             ```python
             import requests
             from wreqs import wreq
 
+            proxies = [
+                "http://proxy1.example.com:8080",
+                "http://proxy2.example.com:8080",
+                "http://proxy3.example.com:8080",
+            ]
+
             req = requests.Request("GET", "https://api.example.com/data")
-            with wreq(req) as response:
-                print(response.status_code)
+            with wreq(req, max_retries=3, proxies=proxies) as response:
                 print(response.json())
-            ```
-
-            Making a request with retry logic:
-            ```python
-            def check_retry(response):
-                return response.status_code >= 500
-
-            req = requests.Request("POST", "https://api.example.com/data", json={"key": "value"})
-            with wreq(req, max_retries=5, check_retry=check_retry) as response:
-                print(response.status_code)
-            ```
-
-            Using a custom session and timeout:
-            ```python
-            session = requests.Session()
-            session.headers.update({"Authorization": "Bearer token"})
-
-            req = requests.Request("GET", "https://api.example.com/protected")
-            with wreq(req, session=session, timeout=10) as response:
-                print(response.text)
             ```
 
         Notes:
             - The context manager automatically closes the session when exiting the context.
             - If a custom session is provided, it will be used for all requests, including retries.
             - The retry_callback can be useful for implementing backoff strategies or logging.
+            - Proxy rotation is done in a round-robin fashion if multiple proxies are provided.
         """
         self.logger = logger
         self.request = request
@@ -96,10 +86,24 @@ class RequestContext:
         self.check_retry = check_retry
         self.retry_callback = retry_callback
         self.timeout = timeout
-        self.send_config = send_config
+        self.proxies = proxies
+        self.current_proxy_index: int = 0
 
         self.logger.info(f"RequestContext initialized: {prettify_request_str(request)}")
         self.logger.debug(f"Max retries: {max_retries}")
+
+    def _get_next_proxy(self) -> Optional[dict[str, str]]:
+        """
+        Fetch the next proxy in the proxies list.
+
+        Returns:
+            Optional[dict[str, str]]: Proxy data.
+        """
+        if not self.proxies:
+            return None
+        proxy = self.proxies[self.current_proxy_index]
+        self.current_proxy_index = (self.current_proxy_index + 1) % len(self.proxies)
+        return {"http": proxy, "https": proxy}
 
     def _fetch(self) -> Response:
         """
@@ -113,9 +117,14 @@ class RequestContext:
         self.logger.info(f"Preparing request")
         prepared_request = self.session.prepare_request(self.request)
 
+        proxy = self._get_next_proxy()
+        if proxy:
+            self.logger.info(f"Using proxy: {proxy}")
+
         try:
             response = self.session.send(
-                prepared_request, timeout=self.timeout, **self.send_config
+                prepared_request,
+                timeout=self.timeout,
             )
             self.logger.info(f"Received response: {prettify_response_str(response)}")
         except Timeout:
@@ -202,11 +211,13 @@ def wreq(
     retry_callback: Optional[Callable[[Response], None]] = None,
     session: Optional[Session] = None,
     timeout: Optional[float] = None,
+    proxies: Optional[list[str]] = None,
 ) -> Generator[Response, None, None]:
-    """A context manager for making HTTP requests with retry and timeout capabilities.
+    """
+    A context manager for making HTTP requests with retry and timeout capabilities.
 
     This context manager provides a convenient way to make HTTP requests with built-in
-    retry logic, timeout handling, and session management.
+    retry logic, timeout handling, session management, and proxy rotation.
 
     Args:
         request (Request): The Request object representing the HTTP request to be made.
@@ -221,6 +232,9 @@ def wreq(
             making the request. If None, a new Session will be created. Defaults to None.
         timeout (Optional[float], optional): The timeout in seconds for the request.
             Defaults to None.
+        proxies (Optional[List[str]], optional): A list of proxy servers to use for the request.
+            If provided, wreqs will rotate through these proxies for each request or retry attempt.
+            Defaults to None.
 
     Yields:
         Response: The Response object from the successful request.
@@ -230,41 +244,27 @@ def wreq(
         Timeout: If the request times out.
 
     Example:
-        Making a simple GET request:
+        Making a request with proxy rotation:
         ```python
         import requests
         from wreqs import wreq
 
+        proxies = [
+            "http://proxy1.example.com:8080",
+            "http://proxy2.example.com:8080",
+            "http://proxy3.example.com:8080",
+        ]
+
         req = requests.Request("GET", "https://api.example.com/data")
-        with wreq(req) as response:
-            print(response.status_code)
+        with wreq(req, max_retries=3, proxies=proxies) as response:
             print(response.json())
-        ```
-
-        Making a request with retry logic:
-        ```python
-        def check_retry(response):
-            return response.status_code >= 500
-
-        req = requests.Request("POST", "https://api.example.com/data", json={"key": "value"})
-        with wreq(req, max_retries=5, check_retry=check_retry) as response:
-            print(response.status_code)
-        ```
-
-        Using a custom session and timeout:
-        ```python
-        session = requests.Session()
-        session.headers.update({"Authorization": "Bearer token"})
-
-        req = requests.Request("GET", "https://api.example.com/protected")
-        with wreq(req, session=session, timeout=10) as response:
-            print(response.text)
         ```
 
     Notes:
         - The context manager automatically closes the session when exiting the context.
         - If a custom session is provided, it will be used for all requests, including retries.
         - The retry_callback can be useful for implementing backoff strategies or logging.
+        - Proxy rotation is done in a round-robin fashion if multiple proxies are provided.
     """
     if session is None:
         session = _wreqs_session.get()
@@ -276,6 +276,7 @@ def wreq(
         retry_callback=retry_callback,
         session=session,
         timeout=timeout,
+        proxies=proxies,
     )
     try:
         yield context.__enter__()
@@ -340,7 +341,8 @@ def configure_logger(
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     filename: Optional[str] = None,
 ) -> None:
-    """Configure the logger for the wreqs module.
+    """
+    Configure the logger for the wreqs module.
 
     This function allows customization of the logger used by the wreqs module. It can
     either use a provided custom logger or configure the default logger with specified

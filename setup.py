@@ -6,7 +6,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="wreqs",
-    version="1.1.1",
+    version="1.2.0",
     author="Arturo Munoz",
     author_email="munoz.arturoroman@gmail.com",
     description="Simplified and enhanced request handling.",

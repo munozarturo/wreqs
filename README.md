@@ -21,7 +21,7 @@ The **wreqs** module is a powerful wrapper around the popular `requests` library
   - [Implementing Custom Retry Logic](#implementing-custom-retry-logic)
   - [Handling Timeouts](#handling-timeouts)
   - [Using Retry Callbacks](#using-retry-callbacks)
-  - [Using Send Kwargs](#using-send-kwargs)
+  - [Using Proxy Rotation](#using-proxy-rotation)
 - [Logging Configuration](#logging-configuration)
   - [Default Logging](#default-logging)
   - [Configuring the Logger](#configuring-the-logger)
@@ -230,22 +230,33 @@ This example prints a message and waits for 2 seconds before each retry attempt.
 
 These advanced usage examples demonstrate the flexibility and power of the `wreqs` module. By leveraging these features, you can create robust and efficient HTTP request handling in your Python applications.
 
-### Using Send Kwargs
+### Using Proxy Rotation
 
-The `wreq` function in the `wreqs` library allows you to pass additional keyword arguments directly to the underlying `requests.Session.send()` method. This feature provides flexibility when you need to customize the request beyond the standard parameters.
-
-You can pass any keyword arguments that `requests.Session.send()` accepts using `**send_kwargs`. Here's a basic example:
+`wreqs` now supports proxy rotation, allowing you to distribute your requests across multiple proxies. This can be useful for avoiding rate limits or accessing region-restricted content. Here's how to use this feature:
 
 ```python
 from wreqs import wreq
-from requests import Request
+import requests
 
-req = Request("GET", "https://api.example.com/data")
-with wreq(req, verify=False, allow_redirects=True) as response:
-    print(response.status_code)
+proxies = [
+    "http://proxy1.example.com:8080",
+    "http://proxy2.example.com:8080",
+    "http://proxy3.example.com:8080",
+]
+
+req = requests.Request("GET", "https://api.example.com/data")
+
+with wreq(req, max_retries=3, proxies=proxies) as response:
+    print(response.json())
 ```
 
-In this example, `verify=False` disables SSL certificate verification, and `allow_redirects=True` allows the request to follow redirects.
+In this example, wreqs will rotate through the provided list of proxies for each request or retry attempt. If a request fails, it will automatically use the next proxy in the list for the retry.
+
+Note:
+
+- Proxies should be provided as a list of strings in the format "<http://host:port>" or "<https://host:port>".
+- The proxy rotation is done in a round-robin fashion.
+- If no proxies are provided, wreqs will use the default network connection.
 
 ## Logging Configuration
 
