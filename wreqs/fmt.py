@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from requests import Request, Response
 
@@ -32,7 +32,7 @@ def _format_content(content: Any) -> Any:
 
 
 def prettify_request_str(
-    request: Request, verbose: bool | Dict[str, bool] = False
+    request: Request, verbose: Union[bool, Dict[str, bool]] = False
 ) -> str:
     """
     Formats a Request object into a human-readable string representation.
@@ -42,7 +42,7 @@ def prettify_request_str(
 
     Args:
         request (Request): The Request object to be formatted.
-        verbose (bool | Dict[str, bool], optional): Controls the verbosity of the output.
+        verbose (bool, Dict[str, bool], optional): Controls the verbosity of the output.
             - If False (default), returns a compact single-line summary.
             - If True, returns a detailed multi-line representation.
             - If a dict, allows fine-grained control over which fields are verbose.
@@ -133,7 +133,7 @@ def prettify_request_str(
 
 
 def prettify_response_str(
-    response: Response, verbose: bool | Dict[str, bool] = False
+    response: Response, verbose: Union[bool, Dict[str, bool]] = False
 ) -> str:
     """
     Formats a Response object into a human-readable string representation.
@@ -143,7 +143,7 @@ def prettify_response_str(
 
     Args:
         response (Response): The Response object to be formatted.
-        verbose (bool | Dict[str, bool], optional): Controls the verbosity of the output.
+        verbose (bool, Dict[str, bool], optional): Controls the verbosity of the output.
             - If False (default), returns a compact single-line summary.
             - If True, returns a detailed multi-line representation.
             - If a dict, allows fine-grained control over which fields are verbose.
