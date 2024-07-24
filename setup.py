@@ -6,7 +6,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="wreqs",
-    version="1.2.0",
+    version="1.2.1",
     author="Arturo Munoz",
     author_email="munoz.arturoroman@gmail.com",
     description="Simplified and enhanced request handling.",
@@ -27,7 +27,7 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
     ],
     keywords="http, requests, wrapper, retry, timeout",
-    python_requires=">=3.10",
+    python_requires=">=3.7",
     install_requires=["requests>=2.20.0"],
     extras_require={
         "dev": ["pytest", "pytest-cov", "flask", "mypy", "flake8", "black"],

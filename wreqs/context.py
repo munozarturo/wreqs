@@ -1,7 +1,7 @@
 import logging
 
 from requests import Request, Response, Session, Timeout
-from typing import Callable, Generator, Optional
+from typing import Callable, Dict, Generator, List, Optional
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from wreqs.error import RetryRequestError
@@ -23,7 +23,7 @@ class RequestContext:
         retry_callback: Optional[Callable[[Response], None]] = None,
         session: Optional[Session] = None,
         timeout: Optional[float] = None,
-        proxies: Optional[list[str]] = None,
+        proxies: Optional[List[str]] = None,
     ) -> None:
         """
         A context manager for making HTTP requests with retry and timeout capabilities.
@@ -92,7 +92,7 @@ class RequestContext:
         self.logger.info(f"RequestContext initialized: {prettify_request_str(request)}")
         self.logger.debug(f"Max retries: {max_retries}")
 
-    def _get_next_proxy(self) -> Optional[dict[str, str]]:
+    def _get_next_proxy(self) -> Optional[Dict[str, str]]:
         """
         Fetch the next proxy in the proxies list.
 
@@ -211,7 +211,7 @@ def wreq(
     retry_callback: Optional[Callable[[Response], None]] = None,
     session: Optional[Session] = None,
     timeout: Optional[float] = None,
-    proxies: Optional[list[str]] = None,
+    proxies: Optional[List[str]] = None,
 ) -> Generator[Response, None, None]:
     """
     A context manager for making HTTP requests with retry and timeout capabilities.
